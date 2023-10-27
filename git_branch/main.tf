@@ -1,17 +1,15 @@
 
 
-variable "branch_to_prefix_map" {
-  type = map(string)
+variable "branch_map" {
+  type = map(object({
+    prefix = string
+    env = string
+  }))
 }
 
 variable "prefix_separator" {
   type = string
   default = "_"
-}
-
-variable "return_key_if_not_found" {
-  type = bool
-  default = true
 }
 
 data external git_branch{
@@ -20,7 +18,9 @@ data external git_branch{
 
 locals{
   branch = data.external.git_branch.result["branch"]
-  prefix = var.return_key_if_not_found ? lookup(var.branch_to_prefix_map, local.branch, local.branch) : var.branch_to_prefix_map[local.branch]
+  is_key_existed = lookup(var.branch_map, local.branch, null) != null
+  prefix = local.is_key_existed? var.branch_map[local.branch].prefix : local.branch
+  env = local.is_key_existed? var.branch_map[local.branch].env : local.branch
 }
 
 output branch{
@@ -29,4 +29,8 @@ output branch{
 
 output "prefix" {
   value = length(local.prefix) > 0 ? "${local.prefix}${var.prefix_separator}" : ""
+}
+
+output "env" {
+  value = local.env
 }
